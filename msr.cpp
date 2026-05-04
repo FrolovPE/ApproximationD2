@@ -853,13 +853,20 @@ void* msr_sovle(void* ptr)
 
     fill_B(nx, ny, a, b, c, d, B, f, p, thr);
 
+    if (thr == 0 && arg->P != 0) {
+        int l_mid;
+        ij2l(nx, ny, nx/2, ny/2, l_mid);
+        B[l_mid] += arg->P * 0.1 * arg->p_maxf;
+    }
+    reduce_sum(p);
+
     if(thr == 0)
     {
         printf("RHS B:\n");
         print_array(B, n, MAXPRINT);
     }
 
-    
+
 
     int it = solve_minimal_error_full(n, A, I, B, x, r, u, v, eps, mi, MAXSTEPS,p, thr, sp);
     

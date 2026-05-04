@@ -3,8 +3,6 @@
 
 #include <QtWidgets/QtWidgets>
 
-#define EPS 1e-15
-
 class Window : public QWidget
 {
   Q_OBJECT
@@ -12,21 +10,16 @@ class Window : public QWidget
 private:
   int func_id;
   const char *f_name;
-  double a;
-  double b;
-  double c;
-  double d;
+  double a, b, c, d;
+  double a0, b0, c0, d0;
   int nx, ny;
-  int mx,my;
+  int mx, my;
   double eps;
   int mi;
-  int p; // threads
+  int p;
 
-
-  double a0;
-  double b0;
   int k;
-  double (*f) (double,double);
+  double (*f) (double, double);
   int draw_mode;
   const char *mode_name;
   int scale;
@@ -34,49 +27,40 @@ private:
 
   double *A;
   double *B;
-  int *I;
+  int    *I;
   double *coeff;
-  double *tmp;
-  double *r,*u,*v,*sp;
+  double *r, *u, *v, *sp;
 
-
+  double max_f ();
+  void   realloc ();
+  void   change_ab ();
+  void   set_func ();
+  void   set_mode ();
 
 public:
   Window (QWidget *parent);
-
-  ~Window();
+  ~Window ();
 
   QSize minimumSizeHint () const;
   QSize sizeHint () const;
 
   int parse_command_line (int argc, char *argv[]);
-  QPointF l2g (double x_loc, double y_loc, double y_min, double y_max);
-  void draw_graph(QPainter &painter, int width,int n,double a, double b,double min_y,double max_y,double delta_y, double (*func)(double,int, double*, double*, double*),double *x, double *coeff,double *tmp);
-  void draw_error(QPainter &painter, int width,int n,double a, double b, double &min_y,double &max_y,double (*func)(double,int, double*, double*, double*),double (*f)(double),double *x, double *coeff,double *tmp);
-  void change_ab ();
-  double max_f();
-  void do_p (double *y,double maxf);
-  void realloc ();
   void eval ();
 
 public slots:
   void change_func ();
-  void set_func ();
   void change_mode ();
-  void set_mode();
   void resize_mult ();
   void resize_dev ();
   void rescale_mult ();
   void rescale_dev ();
   void add_p ();
   void sub_p ();
-  
-  //void resize ();
+  void resize_viz_mult ();
+  void resize_viz_dev ();
 
 protected:
   void paintEvent (QPaintEvent *event);
 };
-
-
 
 #endif

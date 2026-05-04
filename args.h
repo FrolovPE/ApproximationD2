@@ -11,10 +11,12 @@ class args
         double *sp;
         int p;
         int thr;
-        int a, b, c, d;
+        double a, b, c, d;
         int nx, ny, k, mi;
         int n,N;
         double eps;
+        int P;
+        double p_maxf;
         double (*f)(double, double);
         double *t1;
         int *it;
