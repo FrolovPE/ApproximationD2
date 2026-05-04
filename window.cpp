@@ -90,7 +90,8 @@ static QColor palette_color(double t)
 
 Window::Window(QWidget *parent)
     : QWidget(parent),
-      A(nullptr), B(nullptr), I(nullptr), coeff(nullptr),
+      tid(nullptr),ap(nullptr),
+      A(nullptr), B(nullptr), I(nullptr), coeff(nullptr),coeff_work(nullptr),
       r(nullptr), u(nullptr), v(nullptr), sp(nullptr)
 {
     a = DEFAULT_A; b = DEFAULT_B;
@@ -103,6 +104,12 @@ Window::Window(QWidget *parent)
     mode_name = "MODE I f(x,y)";
     scale = DEFAULT_SCALE;
     P = DEFAULT_P;
+    it = 0;
+
+    set_ready(READY);
+    has_res = false;
+    connect(&timer, SIGNAL(timeout()), this, SLOT(check_recompute()));
+    timer.start(50);
 
     a0 = a; b0 = b; c0 = c; d0 = d;
     func_id = k;
@@ -117,10 +124,14 @@ Window::~Window()
     delete[] B;
     delete[] I;
     delete[] coeff;
+    delete[] coeff_work;
     delete[] r;
     delete[] u;
     delete[] v;
     delete[] sp;
+    delete tid;
+    delete ap;
+    pthread_mutex_destroy(&mutex);
 }
 
 QSize Window::minimumSizeHint() const { return QSize(100, 100); }
@@ -166,9 +177,12 @@ void Window::set_func()
 
 void Window::change_func()
 {
+    if (!can_recompute())
+        return;
+
     func_id = (func_id + 1) % N_FUNCS;
     set_func();
-    realloc();
+    // realloc();
     eval();
 }
 
@@ -191,9 +205,9 @@ void Window::change_mode()
 void Window::realloc()
 {
     delete[] A; delete[] B; delete[] I;
-    delete[] coeff; delete[] r; delete[] u; delete[] v; delete[] sp;
+    delete[] coeff; delete[] coeff_work; delete[] r; delete[] u; delete[] v; delete[] sp;
     A = nullptr; B = nullptr; I = nullptr;
-    coeff = nullptr; r = nullptr; u = nullptr; v = nullptr; sp = nullptr;
+    coeff = nullptr; coeff_work = nullptr; r = nullptr; u = nullptr; v = nullptr; sp = nullptr;
 
     int n = (nx+1)*(ny+1);
     int N = n + get_len_msr(nx, ny) + 1;
@@ -202,16 +216,20 @@ void Window::realloc()
     I     = new int[N];
     B     = new double[n];
     coeff = new double[n];
+    coeff_work = new double[n];
     r     = new double[n];
     u     = new double[n];
     v     = new double[n];
     sp    = new double[p];
 
     memset(coeff, 0, n * sizeof(double));
+    memset(coeff_work, 0, n * sizeof(double));
     memset(B,     0, n * sizeof(double));
     memset(r,     0, n * sizeof(double));
     memset(u,     0, n * sizeof(double));
     memset(v,     0, n * sizeof(double));
+
+    has_res = false;
 }
 
 double Window::max_f()
@@ -230,9 +248,13 @@ double Window::max_f()
 
 void Window::eval()
 {
+
+    if (!can_recompute())
+        return;
+
     int n = (nx+1)*(ny+1);
     int N = n + get_len_msr(nx, ny) + 1;
-    int it = 0;
+    
 
     memset(coeff, 0, n * sizeof(double));
     memset(B,     0, n * sizeof(double));
@@ -242,36 +264,54 @@ void Window::eval()
 
     double mf = max_f();
 
-    args *ap  = new args[p];
-    pthread_t *tid = new pthread_t[p];
+    ap  = new args[p];
+    tid = new pthread_t[p];
+    
+    
 
     for (int thr = 0; thr < p; thr++) {
-        ap[thr].thr  = thr; ap[thr].p = p;
-        ap[thr].a = a0; ap[thr].b = b0;
-        ap[thr].c = c0; ap[thr].d = d0;
-        ap[thr].nx = nx; ap[thr].ny = ny;
+        ap[thr].thr  = thr; 
+        ap[thr].p = p;
+        ap[thr].mutex = &mutex;
+        ap[thr].ready = &ready;
+
+
+        ap[thr].a = a0; 
+        ap[thr].b = b0;
+        ap[thr].c = c0;
+        ap[thr].d = d0;
+
+        ap[thr].nx = nx; 
+        ap[thr].ny = ny;
         ap[thr].k  = func_id;
-        ap[thr].eps = eps; ap[thr].mi = mi;
-        ap[thr].n = n; ap[thr].N = N;
-        ap[thr].A = A; ap[thr].I = I;
-        ap[thr].B = B; ap[thr].x = coeff;
-        ap[thr].u = u; ap[thr].v = v;
-        ap[thr].r = r; ap[thr].sp = sp;
+        ap[thr].eps = eps; 
+        ap[thr].mi = mi;
+        ap[thr].n = n; 
+        ap[thr].N = N;
+
+        ap[thr].A = A; 
+        ap[thr].I = I;
+        ap[thr].B = B; 
+        ap[thr].x = coeff_work;
+        ap[thr].u = u; 
+        ap[thr].v = v;
+        ap[thr].r = r; 
+        ap[thr].sp = sp;
+
         ap[thr].it = &it;
         ap[thr].P = P;
         ap[thr].p_maxf = mf;
     }
 
-    for (int thr = 1; thr < p; thr++)
-        pthread_create(tid + thr, nullptr, msr_sovle, ap + thr);
+    for (int thr = 0; thr < p; thr++)
+        pthread_create(tid + thr, nullptr, ApproxD2, ap + thr);
 
-    msr_sovle(ap + 0);
+    // msr_sovle(ap + 0);
 
-    for (int thr = 1; thr < p; thr++)
-        pthread_join(tid[thr], nullptr);
+    // for (int thr = 1; thr < p; thr++)
+    //     pthread_join(tid[thr], nullptr);
 
-    delete[] ap;
-    delete[] tid;
+    
 
     update();
 }
@@ -290,6 +330,15 @@ void Window::change_ab()
 
 void Window::paintEvent(QPaintEvent *)
 {
+    //esli zanyati ne schitat'
+    if (!has_res)
+    {
+        QPainter painter(this);
+        painter.drawText(20, 30, "WAIT, THREADS ARE BUSY");
+        return;
+    }
+
+
     QPainter painter(this);
     int W = width(), H = height();
     if (W <= 0 || H <= 0 || !coeff) return;
@@ -386,6 +435,9 @@ void Window::paintEvent(QPaintEvent *)
 
 void Window::resize_mult()
 {
+    if (!can_recompute())
+        return;
+
     nx *= 2; ny *= 2;
     realloc();
     eval();
@@ -393,6 +445,10 @@ void Window::resize_mult()
 
 void Window::resize_dev()
 {
+    if (!can_recompute())
+        return;
+
+
     nx = std::max(2, nx / 2);
     ny = std::max(2, ny / 2);
     realloc();
@@ -415,12 +471,20 @@ void Window::rescale_dev()
 
 void Window::add_p()
 {
+    if (!can_recompute())
+        return;
+
+
     P++;
     eval();
 }
 
 void Window::sub_p()
 {
+    if (!can_recompute())
+        return;
+
+
     P--;
     eval();
 }
@@ -436,4 +500,53 @@ void Window::resize_viz_dev()
     mx = std::max(2, mx / 2);
     my = std::max(2, my / 2);
     update();
+}
+
+bool Window::can_recompute() const
+{
+    return ready == READY;
+}
+
+void Window::check_recompute()
+{
+    if (get_ready() != DONE)
+        return;
+
+    for (int thr = 0; thr < p; thr++)
+    {
+        pthread_join(tid[thr], nullptr);
+    }
+
+    delete[] ap;
+    delete[] tid;
+    
+
+    tid = nullptr;
+    ap = nullptr;
+
+    std::swap(coeff, coeff_work);
+
+    has_res = true;
+
+    set_ready(READY);
+
+    update();
+}
+
+int Window::get_ready()
+{
+    int value;
+
+    pthread_mutex_lock(&mutex);
+    value = ready;
+    pthread_mutex_unlock(&mutex);
+
+    return value;
+}
+
+void Window::set_ready(int value)
+{
+    pthread_mutex_lock(&mutex);
+    ready = value;
+    pthread_mutex_unlock(&mutex);
 }

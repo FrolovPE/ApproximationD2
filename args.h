@@ -6,7 +6,8 @@
 class args
 {
     public:
-        Window *window;
+        // Window *window;
+        pthread_mutex_t *mutex;
         double *A;
         int *I;
         double *B, *x, *u, *v,*r;
@@ -22,7 +23,7 @@ class args
         double (*f)(double, double);
         double *t1;
         int *it;
-        int ready = 0;
+        int *ready = nullptr;
 
     void choose_func(int k)
     {

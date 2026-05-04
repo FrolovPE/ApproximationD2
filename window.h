@@ -2,12 +2,31 @@
 #define WINDOW_H
 
 #include <QtWidgets/QtWidgets>
+#include "args.h"
+
+class args;
 
 class Window : public QWidget
 {
   Q_OBJECT
 
 private:
+
+  //sostoyania
+  static const int BUSY = 0;
+  static const int READY = 1; // mojno vipolnyat' comandi
+  static const int DONE = 2;  // dealem swap coeffs
+
+  int ready;
+
+  QTimer timer;
+
+  pthread_t *tid;
+  args *ap;
+  bool has_res = false;
+  pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+  int it;
+
   int func_id;
   const char *f_name;
   double a, b, c, d;
@@ -28,7 +47,8 @@ private:
   double *A;
   double *B;
   int    *I;
-  double *coeff;
+  double *coeff;          // 1 complect coeffs 
+  double *coeff_work;     // 2 complect coeffs rabochiy
   double *r, *u, *v, *sp;
 
   double max_f ();
@@ -36,6 +56,7 @@ private:
   void   change_ab ();
   void   set_func ();
   void   set_mode ();
+  
 
 public:
   Window (QWidget *parent);
@@ -46,6 +67,9 @@ public:
 
   int parse_command_line (int argc, char *argv[]);
   void eval ();
+  bool can_recompute() const;
+  int get_ready();
+  void set_ready(int value);
 
 public slots:
   void change_func ();
@@ -58,6 +82,7 @@ public slots:
   void sub_p ();
   void resize_viz_mult ();
   void resize_viz_dev ();
+  void check_recompute();
 
 protected:
   void paintEvent (QPaintEvent *event);

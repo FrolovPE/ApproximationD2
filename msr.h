@@ -36,4 +36,6 @@ double res1(double a, double b, double c, double d, int nx, int ny, double *x, d
 double res2(double a, double b, double c, double d, int nx, int ny, double *x, double (*f) (double, double) );
 double Pf(double px, double py, double a, double b, double c, double d,
     int nx, int ny, double *x);
+    
+void* ApproxD2(void* ptr);
 #endif

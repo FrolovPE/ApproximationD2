@@ -1071,12 +1071,16 @@ void* ApproxD2(void* ptr)
 {
     args *arg = (args*) ptr;
 
-    while(true)
+    msr_sovle(ptr);
+
+    reduce_sum(arg -> p);
+    
+    if(arg -> thr == 0)
     {
-        msr_sovle(ptr);
-
-        arg->ready = 1;
-
-        reduce_sum(arg -> p + 1);
+        pthread_mutex_lock(arg->mutex);
+        *(arg->ready) = 2; // stavim DONE
+        pthread_mutex_unlock(arg->mutex);
     }
+
+    return nullptr;
 }
