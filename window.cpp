@@ -100,6 +100,7 @@ Window::Window(QWidget *parent)
     eps = 1e-10; mi = 1000; p = 1;
     k = DEFAULT_K;
     draw_mode = DEFAULT_MODE;
+    mode_name = "MODE I f(x,y)";
     scale = DEFAULT_SCALE;
     P = DEFAULT_P;
 
@@ -296,17 +297,18 @@ void Window::paintEvent(QPaintEvent *)
     double hx_v = (b - a) / mx;
     double hy_v = (d - c) / my;
 
-    int ntri = 2 * mx * my;
+    int ntri = 2 * mx * my; //triang nums
     double *vals = new double[ntri];
 
-    double vmin =  1e300;
-    double vmax = -1e300;
+    double vmin =  1e30;
+    double vmax = -1e30;
 
     for (int j = 0; j < my; j++) {
         for (int i = 0; i < mx; i++) {
             double xi = a + i * hx_v;
             double yj = c + j * hy_v;
 
+            // centri mass verhnego i nijnego tri
             double cx1 = xi + 2.0/3.0 * hx_v, cy1 = yj + 1.0/3.0 * hy_v;
             double cx2 = xi + 1.0/3.0 * hx_v, cy2 = yj + 2.0/3.0 * hy_v;
 
@@ -342,10 +344,10 @@ void Window::paintEvent(QPaintEvent *)
             double xi = a + i * hx_v;
             double yj = c + j * hy_v;
 
-            double sx00 = (xi          - a) / (b - a) * W;
-            double sx10 = (xi + hx_v   - a) / (b - a) * W;
-            double sy00 = (d - yj         ) / (d - c) * H;
-            double sy01 = (d - (yj+hy_v)  ) / (d - c) * H;
+            double sx00 = (xi - a) / (b - a) * W;
+            double sx10 = (xi + hx_v - a) / (b - a) * W;
+            double sy00 = (d - yj) / (d - c) * H;
+            double sy01 = (d - (yj+hy_v)) / (d - c) * H;
 
             QPointF P00(sx00, sy00);
             QPointF P10(sx10, sy00);
@@ -367,14 +369,14 @@ void Window::paintEvent(QPaintEvent *)
     delete[] vals;
 
     char txt[256];
-    QPen pen_white(Qt::white, 1);
-    painter.setPen(pen_white);
+    QPen pen_red(Qt::black, 1);
+    painter.setPen(pen_red);
 
     snprintf(txt, sizeof(txt), "%s  %s", f_name, mode_name);
     painter.drawText(5, 20, txt);
     snprintf(txt, sizeof(txt), "Nx=%d Ny=%d  Mx=%d My=%d", nx, ny, mx, my);
     painter.drawText(5, 40, txt);
-    snprintf(txt, sizeof(txt), "scale=%d  P=%d", scale, P);
+    snprintf(txt, sizeof(txt), "scale=%d  P=%d eps = %10.3e", scale, P,eps);
     painter.drawText(5, 60, txt);
     snprintf(txt, sizeof(txt), "max{|Fmin|,|Fmax|}=%e", fmax_display);
     painter.drawText(5, 80, txt);

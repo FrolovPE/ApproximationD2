@@ -1,10 +1,12 @@
 #ifndef ARGS_H
 #define ARGS_H
 #include <cmath>
+#include "window.h"
 
 class args
 {
     public:
+        Window *window;
         double *A;
         int *I;
         double *B, *x, *u, *v,*r;
@@ -20,6 +22,7 @@ class args
         double (*f)(double, double);
         double *t1;
         int *it;
+        int ready = 0;
 
     void choose_func(int k)
     {

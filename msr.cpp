@@ -1065,3 +1065,18 @@ if (ly <= lx)
 else
     return x00 * (1 - ly) + x01 * (ly - lx) + x11 * lx;
 }
+
+
+void* ApproxD2(void* ptr)
+{
+    args *arg = (args*) ptr;
+
+    while(true)
+    {
+        msr_sovle(ptr);
+
+        arg->ready = 1;
+
+        reduce_sum(arg -> p + 1);
+    }
+}
