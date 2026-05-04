@@ -67,7 +67,7 @@ public:
 
   int parse_command_line (int argc, char *argv[]);
   void eval ();
-  bool can_recompute() const;
+  bool can_recompute() ;
   int get_ready();
   void set_ready(int value);
 
@@ -83,6 +83,7 @@ public slots:
   void resize_viz_mult ();
   void resize_viz_dev ();
   void check_recompute();
+  void check_n_close();
 
 protected:
   void paintEvent (QPaintEvent *event);

@@ -114,8 +114,8 @@ Window::Window(QWidget *parent)
     a0 = a; b0 = b; c0 = c; d0 = d;
     func_id = k;
     set_func();
-    realloc();
-    eval();
+    // realloc();
+    // eval();
 }
 
 Window::~Window()
@@ -502,9 +502,16 @@ void Window::resize_viz_dev()
     update();
 }
 
-bool Window::can_recompute() const
+bool Window::can_recompute() 
 {
-    return ready == READY;
+    int value;
+
+   
+    value = get_ready();
+    
+
+    return value == READY;
+
 }
 
 void Window::check_recompute()
@@ -549,4 +556,13 @@ void Window::set_ready(int value)
     pthread_mutex_lock(&mutex);
     ready = value;
     pthread_mutex_unlock(&mutex);
+}
+
+
+void Window::check_n_close()
+{
+    if (!can_recompute())
+        return;
+    
+    close();
 }

@@ -54,7 +54,7 @@ int main (int argc, char *argv[])
   action = tool_bar->addAction ("&Viz /2", graph_area, SLOT (resize_viz_dev ()));
   action->setShortcut (QString ("9"));
 
-  action = tool_bar->addAction ("E&xit", window, SLOT (close ()));
+  action = tool_bar->addAction ("E&xit", window, SLOT (close()));
   action->setShortcut (QString ("Ctrl+X"));
 
 
