@@ -2,15 +2,19 @@ QT += widgets
 
 
 TARGET        = a.out
-HEADERS       = window.h \
-		newton.h \
-		spline.h 
+
+HEADERS       = args.h  \
+				extpll.h  \
+				msr.h  \
+				mytime.h  \
+				window.h 
 		
 
 SOURCES       = main.cpp \
-                window.cpp \
-		newton.cpp \
-		spline.cpp 
+				extpll.cpp\
+				msr.cpp  \
+				mytime.cpp  \
+				window.cpp 
 	
 
 PROJECT_NAME  = graph.pro

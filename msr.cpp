@@ -944,7 +944,11 @@ double res1(double a, double b, double c, double d, int nx, int ny, double *x, d
     {
         for(int j = 0; j < ny; j++)
         {
-            
+            int l00, l10, l01, l11;
+            ij2l(nx, ny, i, j, l00);
+            ij2l(nx, ny, i + 1, j, l10);
+            ij2l(nx, ny, i, j + 1, l01);
+            ij2l(nx, ny, i + 1, j + 1, l11);
 
             double xi = a + i * hx;
             double yj = c + j * hy;
@@ -952,9 +956,12 @@ double res1(double a, double b, double c, double d, int nx, int ny, double *x, d
             double xi1 = xi + 2.0 * hx / 3;
             double yj1 = yj + 1.0 * hy / 3;
 
-            
+            double x00 = x[l00];
+            double x10 = x[l10];
+            double x01 = x[l01];
+            double x11 = x[l11];
 
-            double pf1 =  Pf(xi1,yj1,a,b,c,d,nx,ny,x);
+            double pf1 =  (x00 + x10 + x11)/3.0;
             double e1 = fabs(f(xi1, yj1) - pf1);
 
             if(e1 > r1)
@@ -962,7 +969,7 @@ double res1(double a, double b, double c, double d, int nx, int ny, double *x, d
 
             double xi2 = xi + 1.0 * hx / 3;
             double yj2 = yj + 2.0 * hy / 3;
-            double pf2 =  Pf(xi2,yj2,a,b,c,d,nx,ny,x);
+            double pf2 =  (x00 + x01 + x11)/3.0;
             double e2 = fabs(f(xi2, yj2) - pf2);
 
             if(e2 > r1)
