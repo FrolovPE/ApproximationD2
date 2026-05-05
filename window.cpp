@@ -121,6 +121,13 @@ Window::Window(QWidget *parent)
 
 Window::~Window()
 {
+    timer.stop();
+    if (tid != nullptr) {
+        for (int thr = 0; thr < p; thr++)
+            pthread_join(tid[thr], nullptr);
+        delete[] tid; tid = nullptr;
+        delete[] ap;  ap  = nullptr;
+    }
     delete[] A;
     delete[] B;
     delete[] I;
@@ -131,12 +138,6 @@ Window::~Window()
     delete[] v;
     delete[] sp;
     delete[] vals;
-    if (tid != nullptr) {
-        for (int thr = 0; thr < p; thr++)
-            pthread_join(tid[thr], nullptr);
-        delete[] tid; tid = nullptr;
-        delete[] ap;  ap  = nullptr;
-    }
     pthread_mutex_destroy(&mutex);
 }
 
@@ -589,7 +590,7 @@ void Window::closeEvent(QCloseEvent *event)
     event->accept();
 }
 
-void Window::check_n_close() //ne rabotaet(
+void Window::check_n_close() // zamena close
 {
     if (!can_recompute())
         return;
