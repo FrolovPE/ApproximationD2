@@ -90,9 +90,10 @@ static QColor palette_color(double t)
 
 Window::Window(QWidget *parent)
     : QWidget(parent),
-      tid(nullptr),ap(nullptr),
-      A(nullptr), B(nullptr), I(nullptr), coeff(nullptr),coeff_work(nullptr),
-      r(nullptr), u(nullptr), v(nullptr), sp(nullptr)
+      tid(nullptr), ap(nullptr), argv0(nullptr),
+      A(nullptr), B(nullptr), I(nullptr), coeff(nullptr), coeff_work(nullptr),
+      r(nullptr), u(nullptr), v(nullptr), sp(nullptr),
+      vals(nullptr), vals_size(0)
 {
     a = DEFAULT_A; b = DEFAULT_B;
     c = DEFAULT_C; d = DEFAULT_D;
@@ -129,8 +130,13 @@ Window::~Window()
     delete[] u;
     delete[] v;
     delete[] sp;
-    delete tid;
-    delete ap;
+    delete[] vals;
+    if (tid != nullptr) {
+        for (int thr = 0; thr < p; thr++)
+            pthread_join(tid[thr], nullptr);
+        delete[] tid; tid = nullptr;
+        delete[] ap;  ap  = nullptr;
+    }
     pthread_mutex_destroy(&mutex);
 }
 
@@ -160,6 +166,7 @@ int Window::parse_command_line(int argc, char *argv[])
         || p <= 0 || k < 0 || k >= N_FUNCS)
         return -2;
 
+    argv0 = argv[0];
     a0 = a; b0 = b; c0 = c; d0 = d;
     func_id = k;
     set_func();
@@ -252,6 +259,8 @@ void Window::eval()
     if (!can_recompute())
         return;
 
+    set_ready(BUSY);
+
     int n = (nx+1)*(ny+1);
     int N = n + get_len_msr(nx, ny) + 1;
     
@@ -264,6 +273,9 @@ void Window::eval()
 
     double mf = max_f();
 
+    delete[] ap;   ap  = nullptr;
+    delete[] tid;  tid = nullptr;
+
     ap  = new args[p];
     tid = new pthread_t[p];
     
@@ -274,6 +286,7 @@ void Window::eval()
         ap[thr].p = p;
         ap[thr].mutex = &mutex;
         ap[thr].ready = &ready;
+        ap[thr].argv0 = argv0;
 
 
         ap[thr].a = a0; 
@@ -346,8 +359,12 @@ void Window::paintEvent(QPaintEvent *)
     double hx_v = (b - a) / mx;
     double hy_v = (d - c) / my;
 
-    int ntri = 2 * mx * my; //triang nums
-    double *vals = new double[ntri];
+    int ntri = 2 * mx * my;
+    if (ntri != vals_size) {
+        delete[] vals;
+        vals = new double[ntri];
+        vals_size = ntri;
+    }
 
     double vmin =  1e30;
     double vmax = -1e30;
@@ -358,19 +375,19 @@ void Window::paintEvent(QPaintEvent *)
             double yj = c + j * hy_v;
 
             // centri mass verhnego i nijnego tri
-            double cx1 = xi + 2.0/3.0 * hx_v, cy1 = yj + 1.0/3.0 * hy_v;
-            double cx2 = xi + 1.0/3.0 * hx_v, cy2 = yj + 2.0/3.0 * hy_v;
+            double xi1 = xi + 2.0/3.0 * hx_v, yj1 = yj + 1.0/3.0 * hy_v;
+            double xi2 = xi + 1.0/3.0 * hx_v, yj2 = yj + 2.0/3.0 * hy_v;
 
             double v1, v2;
             if (draw_mode == 0) {
-                v1 = f(cx1, cy1);
-                v2 = f(cx2, cy2);
+                v1 = f(xi1, yj1);
+                v2 = f(xi2, yj2);
             } else if (draw_mode == 1) {
-                v1 = Pf(cx1, cy1, a0, b0, c0, d0, nx, ny, coeff);
-                v2 = Pf(cx2, cy2, a0, b0, c0, d0, nx, ny, coeff);
+                v1 = Pf(xi1, yj1, a0, b0, c0, d0, nx, ny, coeff);
+                v2 = Pf(xi2, yj2, a0, b0, c0, d0, nx, ny, coeff);
             } else {
-                v1 = fabs(f(cx1,cy1) - Pf(cx1,cy1, a0,b0,c0,d0, nx,ny,coeff));
-                v2 = fabs(f(cx2,cy2) - Pf(cx2,cy2, a0,b0,c0,d0, nx,ny,coeff));
+                v1 = fabs(f(xi1,yj1) - Pf(xi1,yj1, a0,b0,c0,d0, nx,ny,coeff));
+                v2 = fabs(f(xi2,yj2) - Pf(xi2,yj2, a0,b0,c0,d0, nx,ny,coeff));
             }
 
             int idx = 2*(j*mx + i);
@@ -414,8 +431,6 @@ void Window::paintEvent(QPaintEvent *)
             painter.drawPolygon(tri2, 3);
         }
     }
-
-    delete[] vals;
 
     char txt[256];
     QPen pen_red(Qt::black, 1);
@@ -537,6 +552,11 @@ void Window::check_recompute()
 
     set_ready(READY);
 
+    if (close_requested) {
+        close();
+        return;
+    }
+
     update();
 }
 
@@ -559,7 +579,17 @@ void Window::set_ready(int value)
 }
 
 
-void Window::check_n_close()
+void Window::closeEvent(QCloseEvent *event)
+{
+    if (!can_recompute()) {
+        close_requested = true;
+        event->ignore();
+        return;
+    }
+    event->accept();
+}
+
+void Window::check_n_close() //ne rabotaet(
 {
     if (!can_recompute())
         return;

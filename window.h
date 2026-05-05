@@ -24,9 +24,11 @@ private:
   pthread_t *tid;
   args *ap;
   bool has_res = false;
+  bool close_requested = false;
   pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
   int it;
 
+  char *argv0;
   int func_id;
   const char *f_name;
   double a, b, c, d;
@@ -47,9 +49,11 @@ private:
   double *A;
   double *B;
   int    *I;
-  double *coeff;          // 1 complect coeffs 
-  double *coeff_work;     // 2 complect coeffs rabochiy
+  double *coeff;
+  double *coeff_work;
   double *r, *u, *v, *sp;
+  double *vals;
+  int     vals_size;
 
   double max_f ();
   void   realloc ();
@@ -87,6 +91,7 @@ public slots:
 
 protected:
   void paintEvent (QPaintEvent *event);
+  void closeEvent (QCloseEvent *event);
 };
 
 #endif

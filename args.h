@@ -1,12 +1,13 @@
 #ifndef ARGS_H
 #define ARGS_H
 #include <cmath>
-#include "window.h"
+
 
 class args
 {
     public:
         // Window *window;
+        char *argv0;
         pthread_mutex_t *mutex;
         double *A;
         int *I;

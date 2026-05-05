@@ -815,6 +815,11 @@ void* msr_sovle(void* ptr)
     double *sp = arg->sp;
     // int N = arg->N;
 
+    int TASK = 7;
+    double r1=0, r2=0, r3=0, r4=0;
+    double t1=0, t2=0;
+    
+
     arg->choose_func(k);
 
     double (*f)(double, double) = arg->f;
@@ -830,12 +835,12 @@ void* msr_sovle(void* ptr)
     }
     // reduce_sum(p);
 
-    if (thr == 0) 
-    {
-        printf("Matrix A:\n");
+    // if (thr == 0) 
+    // {
+    //     printf("Matrix A:\n");
 
-        print_msr_matrix(A, I, n, MAXPRINT);
-    }
+    //     print_msr_matrix(A, I, n, MAXPRINT);
+    // }
 
     if(check_symm(nx, ny, hx, hy, I, A, p, thr) < 0)
     {
@@ -860,16 +865,19 @@ void* msr_sovle(void* ptr)
     }
     reduce_sum(p);
 
-    if(thr == 0)
-    {
-        printf("RHS B:\n");
-        print_array(B, n, MAXPRINT);
-    }
+    // if(thr == 0)
+    // {
+    //     printf("RHS B:\n");
+    //     print_array(B, n, MAXPRINT);
+    // }
 
 
+    t1 = get_full_time();
 
     int it = solve_minimal_error_full(n, A, I, B, x, r, u, v, eps, mi, MAXSTEPS,p, thr, sp);
     
+    t1 = get_full_time() - t1;
+
     if(it < 0)
     {
         if(thr == 0)
@@ -877,14 +885,29 @@ void* msr_sovle(void* ptr)
         
     }
 
-    if(thr == 0)
-    {
-        printf("Solution x:\n");
-        print_array(x, n, MAXPRINT);
-    }
+    // if(thr == 0)
+    // {
+    //     printf("Solution x:\n");
+    //     print_array(x, n, MAXPRINT);
+    // }
 
     if(thr == 0)
         *arg->it = it;
+
+    
+    if(thr == 0)
+    {
+        t2 = get_full_time();
+        //Residuals
+        r1 = res1(a, b, c, d, nx, ny, x, f);
+        r2 = res2(a, b, c, d, nx, ny, x, f);
+        r3 = res3(a, b, c, d, nx, ny, x, f);
+        r4 = res4(a, b, c, d, nx, ny, x, f);
+    
+        t2 = get_full_time() - t2;
+        
+        report(arg -> argv0,TASK,r1,r2,r3,r4,t1,t2,it,eps,k,nx,ny,p);
+    }
 
 
     return nullptr;
